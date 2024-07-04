@@ -17,6 +17,9 @@ def resource_path(relative_path):
 # 초기화
 pygame.init()
 
+icon = pygame.image.load(resource_path('Images/custom_sudoku.png'))
+pygame.display.set_icon(icon)
+
 # 화면 크기 설정
 DEFAULT_SIZE = width, height = 800, 600
 screen = pygame.display.set_mode(DEFAULT_SIZE, pygame.RESIZABLE)
@@ -31,7 +34,7 @@ black = (0, 0, 0)
 gray = (177, 177, 177)
 white = (255, 255, 255)
 HL_SELECTED = (100, 100, 100, 128)
-HL_INVALID = (75, 0, 0, 128)
+HL_INVALID = (100, 0, 0, 128)
 
 full_txt = {'0':'０', '1':'１', '2':'２', '3':'３', '4':'４',
             '5':'５', '6':'６', '7':'７', '8':'８', '9':'９',
@@ -87,6 +90,12 @@ def init_grid(screen):
 
     grid_rect = [[pygame.Rect(x + col * cell_size, y + row * cell_size, 1.05 * cell_size, 1.05 * cell_size) for col in range(9)] for row in range(9)]
 
+    for row in range(9):
+        for col in range(len(ex_row[row])):
+            grid_rect[row].append(pygame.Rect(x + (9.05 + col / 2) * cell_size, y + row * cell_size, 1.02 * cell_size / 2, 1.02 * cell_size))
+
+    grid_rect.extend([[pygame.Rect(x + col * cell_size, y + (9.05 + row / 2) * cell_size, 1.02 * cell_size, 1.02 * cell_size / 2) for col in range(9)] for row in range(ex_n)])
+
     return grid_rect
 
     
@@ -109,15 +118,22 @@ def draw_grid(screen, grid_rect):
     x = (width - grid_width) / 2
     y = (height - grid_height) / 2
 
+    # 하이라이트 표시
     for name, (cells, color) in highlight.items():
         for row, col in cells:
-            surface = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+            surface = pygame.Surface(grid_rect[row][col].size, pygame.SRCALPHA)
             surface.fill(color)
             screen.blit(surface, grid_rect[row][col].topleft)
 
     # 그리드 그리기
     for row in range(9):
         for col in range(9):
+            # 특수 규칙
+            if ex_grid[row][col]:
+                ex_text = bold_font.render(ex_grid[row][col], True, (40, 40, 40))
+                ex_text_rect = ex_text.get_rect(center=grid_rect[row][col].center)
+                screen.blit(ex_text, ex_text_rect)
+            
             num_color = (150, 150, 150)
             num_font = font
             # 숫자 그리기
@@ -143,21 +159,15 @@ def draw_grid(screen, grid_rect):
             pygame.draw.line(screen, gray, (x + col * cell_size, y), (x + col * cell_size, y + grid_height), 1)
 
     for row in range(9):
-        for col, each in enumerate(ex_row[row]):
-            rect = pygame.Rect(x + (9.1 + col / 2) * cell_size, y + row * cell_size, cell_size / 2, cell_size)
-            #pygame.draw.rect(screen, (50, 50, 50), rect)
-
+        for col, each in enumerate(ex_row[row], 9):
             text = extra_font.render(each, True, white)
-            text_rect = text.get_rect(center=rect.center)
+            text_rect = text.get_rect(center=grid_rect[row][col].center)
             screen.blit(text, text_rect)
         
     for col in range(9):
-        for row, each in enumerate(ex_col[col]):
-            rect = pygame.Rect(x + col * cell_size, y + (9.1 + row / 2) * cell_size, cell_size, cell_size / 2)
-            #pygame.draw.rect(screen, (50, 50, 50), rect)
-
+        for row, each in enumerate(ex_col[col], 9):
             text = extra_font.render(each, True, white)
-            text_rect = text.get_rect(center=rect.center)
+            text_rect = text.get_rect(center=grid_rect[row][col].center)
             screen.blit(text, text_rect)
         
 
@@ -295,22 +305,23 @@ description = {
 ＋ ㅡ ㅡ ㅡ ＋ ㅡ ㅡ ㅡ ＋''',
 }
 
-title = '''Custom Sudoku v1.0
+title = '''Custom Sudoku v1.1
 
 What's new:
- - 텍스트 기반 스도쿠 생성 구현
- - 다중 선택 및 입력 구현
- - 키보드 및 마우스를 이용한 조작 구현
+ - 9x9 그리드 위에 표시되는 특수 규칙(RO, LI) 시각화
+ - 단일 모드 RO, QD, QT에 대한 세부 규칙 판정 추가
 
 Future update:
- 1. 세부 규칙 판정
- 1. 드래그로 다중 선택 구현
- 2. 메모 기능 구현
+ 1. 세부 규칙 판정 (3/11 완료)
+ 1. 메모 기능 구현
+ 2. 드래그로 다중 선택 구현
  2. 세부 규칙 툴팁 구현
  3. 타이머 구현
  3. 결과를 텍스트/이미지로 공유
  4. 세이브 구현
  4. Undo Redo 구현
+ 5. 마우스 위치를 바탕으로하는 힌트 표시
+ 5. 체크포인트 구현
 
 Made by cubic_3ct. Thanks for pillowprism'''
     
@@ -399,20 +410,113 @@ def resize_UI(root, UI, ui_format):
             resize_UI(target, sub, formats['subUI'])
 
 def check_board_valid(grid, ex_grid, ex_row, ex_col, gametype):
-    invalid = []
+    invalid = set()
     for row in range(9):
         for col in range(9):
             num = grid[row][col]
             if not num:
                 continue
 
-            row_count = sum(grid[row][i] == num for i in range(9))
-            col_count = sum(grid[i][col] == num for i in range(9))
-            box_count = sum(grid[row // 3 * 3 + i][col // 3 * 3 + j] == num for i in range(3) for j in range(3))
+            row_count = sum(bool(grid[row][i]) and int(grid[row][i]) == int(num) for i in range(9))
+            col_count = sum(bool(grid[i][col]) and int(grid[i][col]) == int(num) for i in range(9))
+            box_count = sum(bool(grid[row // 3 * 3 + i][col // 3 * 3 + j]) and int(grid[row // 3 * 3 + i][col // 3 * 3 + j]) == int(num) for i in range(3) for j in range(3))
             if row_count > 1 or col_count > 1 or box_count > 1:
-                invalid.append((row, col))
+                invalid.add((row, col))
+
+    if 'TP' in gametype:
+        for row in range(9):
+            for col in range(7):
+                unit = [grid[row][col + i] for i in range(3)]
+                if None in unit:
+                    continue
+                unit = list(map(int, unit))
+
+                if unit[0] + 1 == unit[1] == unit[2] - 1 or unit[0] - 1 == unit[1] == unit[2] + 1:
+                    invalid.update({(row, col + i) for i in range(3)})
+                
+        for col in range(9):
+            for row in range(7):
+                unit = [grid[row + i][col] for i in range(3)]
+                if None in unit:
+                    continue
+                unit = list(map(int, unit))
+
+                if unit[0] + 1 == unit[1] == unit[2] - 1 or unit[0] - 1 == unit[1] == unit[2] + 1:
+                    invalid.update({(row + i, col) for i in range(3)})
+
+        for row in range(7):
+            for col in range(7):
+                unit = [grid[row + i][col + i] for i in range(3)]
+                if None in unit:
+                    continue
+                unit = list(map(int, unit))
+
+                if unit[0] + 1 == unit[1] == unit[2] - 1 or unit[0] - 1 == unit[1] == unit[2] + 1:
+                    invalid.update({(row + i, col + i) for i in range(3)})
+                
+        for row in range(2, 9):
+            for col in range(7):
+                unit = [grid[row - i][col + i] for i in range(3)]
+                if None in unit:
+                    continue
+                unit = list(map(int, unit))
+
+                if unit[0] + 1 == unit[1] == unit[2] - 1 or unit[0] - 1 == unit[1] == unit[2] + 1:
+                    invalid.update({(row - i, col + i) for i in range(3)})
+
+    if 'RO' in gametype:
+        for row in range(9):
+            for col in range(9):
+                if not grid[row][col] or not ex_grid[row][col] or (row, col) in invalid:
+                    continue
+
+                if ex_grid[row][col] == 'L' and int(grid[row][col]) not in range(1, 4):
+                    invalid.add((row, col))
+                elif ex_grid[row][col] == 'M' and int(grid[row][col]) not in range(4, 7):
+                    invalid.add((row, col))
+                elif ex_grid[row][col] == 'H' and int(grid[row][col]) not in range(7, 10):
+                    invalid.add((row, col))
+
+    if 'QD' in gametype:
+        square = [(0, 0), (1, 0), (0, 1), (1, 1)]
+        for row in range(8):
+            for col in range(8):
+                total = 0
+                for x, y in square:
+                    if not grid[row + x][col + y]:
+                        break
+                    total += int(grid[row + x][col + y])
+                else:
+                    if total not in range(16, 25):
+                        for x, y in square:
+                            invalid.add((row + x, col + y))
+
+    # ex_row/col 규칙
+    if 'QT' in gametype:
+        for row in range(9):
+            if not ex_row[row]:
+                continue
+
+            x, y = map(int, ex_row[row])
+            if not grid[row][x - 1] or not grid[row][y - 1]:
+                continue
+
+            if (int(grid[row][x - 1]) == y) == (int(grid[row][y - 1]) == x):
+                invalid.update({(row, x - 1), (row, y - 1), (row, 9), (row, 10)})
+
+        for col in range(9):
+            if not ex_col[col]:
+                continue
+
+            x, y = map(int, ex_col[col])
+            if not grid[x - 1][col] or not grid[y - 1][col]:
+                continue
+
+            if (int(grid[x - 1][col]) == y) == (int(grid[y - 1][col]) == x):
+                invalid.update({(x - 1, col), (y - 1, col), (9, col), (10, col)})
+
             
-    return invalid
+    return list(invalid)
 
 def check_board_format(board, gametype):    
     board = board.replace('  ', ' •')
@@ -438,6 +542,8 @@ def check_board_format(board, gametype):
             if i < 9 and j < 9:
                 if 'LI' in gametype and item.isdigit():
                     ex_grid[i][j] = item
+                elif 'RO' in gametype and item.isalpha():
+                    ex_grid[i][j] = item
                 else:
                     grid[i][j] = full_txt[item]
             elif i >= 9 and j < 9:
@@ -445,6 +551,10 @@ def check_board_format(board, gametype):
             elif j >= 9 and i < 9:
                 ex_row[i].append(item)
 
+    for col in range(9):
+        if set(ex_col[col]) == {'•'}:
+            ex_col[col] = []
+            
     min_ex_row, max_ex_row = min(len(each) for each in ex_row), max(len(each) for each in ex_row)
     min_ex_col, max_ex_col = min(len(each) for each in ex_col), max(len(each) for each in ex_col)
 
@@ -459,9 +569,14 @@ def check_board_format(board, gametype):
         print("Unexpected non-digit cells")
         valid = False
 
-    if 'QT' in gametype and (sum(len(each) not in (0, 2) for each in ex_row) > 0 or sum(len(each) not in (0, 2) for each in ex_col)):
-        print("Unexpected format of QT rules")
-        valid = False
+    if 'QT' in gametype:
+        if sum(len(each) not in (0, 2) for each in ex_row) > 0 or sum(len(each) not in (0, 2) for each in ex_col):
+            print("Unexpected format of QT rules")
+            valid = False
+        elif sum(each[0] == each[1] for each in ex_row if each) > 0 or sum(each[0] == each[1] for each in ex_col if each):
+            print("Impossible format of QT rules")
+            valid = False
+            
 
     if not valid:
         return None, None, None, None
@@ -550,8 +665,8 @@ while True:
         elif page == 'Game':
             if event.type == pygame.MOUSEBUTTONDOWN:
                 new_select = None
-                for row in range(len(grid_rect)):
-                    for col in range(len(grid_rect[row])):
+                for row in range(9):
+                    for col in range(9):
                         if grid_rect[row][col].collidepoint(event.pos):
                             new_select = (row, col)
                             break
@@ -631,10 +746,10 @@ while True:
 
         draw_grid(screen, grid_rect)
 
-        for row in grid_rect:
-            for cell in row:
-                if cell.collidepoint(mouse_pos):
-                    pygame.draw.rect(screen, (100, 100, 200), cell, 3)
+        for row in range(9):
+            for col in range(9):
+                if grid_rect[row][col].collidepoint(mouse_pos):
+                    pygame.draw.rect(screen, (100, 100, 200), grid_rect[row][col], 3)
                     break
             else: continue
             break
