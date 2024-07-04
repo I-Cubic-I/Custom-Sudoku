@@ -1,0 +1,31 @@
+{
+	"font_paths": {
+        "default": ["C:/Windows/Fonts/NanumGothic.ttf"]
+    },
+    "font_sizes": {
+        "default": 20
+    },
+	 "text_entry_box":
+    {
+        "misc":
+        {
+            "border_width": "3",
+            "padding": "15,15",
+            "line_spacing": "0.85"
+        }
+	 },
+    "text_box": {
+		 "font":
+         {
+             "name": "NanumGothic",
+             "size": "12",
+			 "regular_path": "C:/Windows/Fonts/NanumGothic.ttf"
+         },
+        "misc":
+        {
+            "border_width": "1",
+            "padding": "15,15",
+            "line_spacing": "0.85"
+        }
+    }
+}

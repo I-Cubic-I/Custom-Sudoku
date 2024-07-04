@@ -1,0 +1,13 @@
+# Distribution / packaging
+build/
+dist/
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# ect
+export.txt
+custom_sudoku_v*.py
