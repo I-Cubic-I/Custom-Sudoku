@@ -343,7 +343,7 @@ Future update:
  5. 체크포인트 구현
 '''
     
-menu_format = {
+main_format = {
     'start':{
         'class':pygame_gui.elements.UIButton,
         'pos':(59/72, 53/60),
@@ -893,9 +893,9 @@ def main():
     manager = pygame_gui.UIManager((width, height), resource_path('Themes/theme.json'))
 
 
-    page = 'Menu'
+    page = 'Main'
 
-    UI = init_UI(screen, menu_format, manager)
+    UI = init_UI(screen, main_format, manager)
     gametype = []
     grid = ex_grid = ex_row = ex_col = None
     grid_rect = None
@@ -921,8 +921,8 @@ def main():
                 screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
 
                 manager.set_window_resolution(event.size)
-                if page == 'Menu':
-                    resize_UI(screen, UI, menu_format)
+                if page == 'Main':
+                    resize_UI(screen, UI, main_format)
                 elif page == 'Game':
                     grid_rect = init_grid(screen, grid, ex_row, ex_col)
                 elif page == 'Paused':
@@ -932,7 +932,7 @@ def main():
             # pygame_gui 이벤트
             manager.process_events(event)
 
-            if page == 'Menu':
+            if page == 'Main':
                 # 시작 버튼 클릭
                 if event.type == pygame_gui.UI_BUTTON_PRESSED and (target:=event.ui_element) == UI['start']:
                     gametype = UI['selection'].get_multi_selection()
@@ -1061,9 +1061,9 @@ def main():
                     if target.text == 'exit':
                         target.set_text("really?")
                     elif target.text == 'really?':
-                        page = 'Menu'
+                        page = 'Main'
                         clear_UI(UI)
-                        UI = init_UI(screen, menu_format, manager)
+                        UI = init_UI(screen, main_format, manager)
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         page = 'Game'
@@ -1071,7 +1071,7 @@ def main():
                         grid_rect = init_grid(screen, grid, ex_row, ex_col)
                     
 
-        if page == 'Menu':
+        if page == 'Main':
             manager.update(time_delta)
             screen.fill(black)
             manager.draw_ui(screen)
@@ -1099,7 +1099,6 @@ def main():
             manager.update(time_delta)
             screen.fill(black)
             manager.draw_ui(screen)
-            raise NameError()
 
         draw_custom_cursor(screen, mouse_pos)
 
