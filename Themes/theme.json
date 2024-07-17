@@ -27,5 +27,14 @@
             "padding": "15,15",
             "line_spacing": "0.85"
         }
-    }
+    },
+     "label": {
+         "font":
+         {
+			 "name": "NanumGothic",
+             "size": "32",
+             "bold": "0",
+             "italic": "0"
+         }
+     }
 }
