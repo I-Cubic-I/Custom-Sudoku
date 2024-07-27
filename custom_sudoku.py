@@ -6,6 +6,7 @@ import os
 import webbrowser
 import tkinter as tk
 from tkinter import messagebox
+import traceback
 
 def resource_path(relative_path):
     try:
@@ -34,14 +35,17 @@ full_txt = {'0':'０', '1':'１', '2':'２', '3':'３', '4':'４',
 
 ex_color = defaultdict(lambda: (40, 40, 40))
 ex_color.update({'CT':(255, 255, 40),
+                 'LK':(40, 150, 40),
                 })
 
 ex_size = defaultdict(lambda: 0.6)
 ex_size.update({'CT':0.3,
+                'LK':0.4,
                 })
 
 ex_offset = defaultdict(lambda: (0, 0))
 ex_offset.update({'CT':(0, -0.35),
+                  'LK':(0.49, 0),
                   })
 
 
@@ -314,9 +318,15 @@ L은 1-3, M은 4-6, H는 7-9가 대체된 것입니다.''',
 ｜ １ 7^５ ｜ • ６ • ｜
 ｜ • ４ • ｜ • • • ｜
 ＋ ㅡ ㅡ ㅡ ＋ ㅡ ㅡ ㅡ ＋''',
+    'LK':'''[ LK ] 링크드 - 대시(-) 표시로 연결된 두 칸에 적힌 숫자는 합해서 10이거나 차이가 1이어야 합니다.
+＋ ㅡ ㅡ ㅡ ＋ ㅡ ㅡ ㅡ ＋
+｜ • 8ㅡ9 ｜ • 4ㅡ6 ｜
+｜ 1ㅡ2 • ｜ • • • ｜
+｜ • • • ｜ • 3ㅡ7 ｜
+＋ ㅡ ㅡ ㅡ ＋ ㅡ ㅡ ㅡ ＋''',
 }
 
-title = '''[ Custom Sudoku v1.2 ]
+title = '''[ Custom Sudoku v1.3 ]
 
 Official : <a href="https://github.com/I-Cubic-I/Custom-Sudoku">github.com/I-Cubic-I/Custom-Sudoku</a>
 
@@ -325,13 +335,12 @@ Official : <a href="https://github.com/I-Cubic-I/Custom-Sudoku">github.com/I-Cub
 '''
 
 update_description = '''What's new:
- - 단일 모드 DT, CR, SD, FX, LI, RM, CT에 대한 세부 규칙 판정 추가
- - FX는 구현이 완룓되었으나 버그 또는 사용자 경험 향상을 위해 수정 가능성 있음
- - 특수 복합 모드 'RO + SD', 'RO + CT'에 대한 세부 규칙 판정 추가
- - 게임 내에서 일시정지와 메뉴로 나가는 기능 추가
+ - 단일 모드 LK에 대한 세부 규칙 판정 추가
+ - 게임 모드 선택 리스트의 스크롤이 내려가면 규칙이 올바르게 표시되지 않는 버그 수정
+ - 에러 메시지 접근성 향상
 
 Future update:
- 1. 세부 규칙 판정 (11/12 완료)
+ 1. 세부 규칙 판정 (12/13 완료)
  1. 메모 기능 구현
  2. 드래그로 다중 선택 구현
  2. 세부 규칙 툴팁 구현
@@ -360,7 +369,7 @@ main_format = {
         'class':pygame_gui.elements.UISelectionList,
         'pos':(59/72, 3/5),
         'size':(1/4, 2/5),
-        'kwargs':{'item_list':['DT', 'TP', 'CR', 'RO', 'SD', 'FX', 'AS', 'QT', 'LI', 'RM', 'QD', 'CT'],
+        'kwargs':{'item_list':['DT', 'TP', 'CR', 'RO', 'SD', 'FX', 'AS', 'QT', 'LI', 'RM', 'QD', 'CT', 'LK'],
                   'allow_multi_select':True,
         },
     },
@@ -608,6 +617,16 @@ def check_board_valid(grid, ex_grid, ex_row, ex_col, gametype):
                         if int(grid[row][col]) < int(grid[row + dx][col + dy]):
                             invalid.update({(row, col), (row + dx, col + dy)})
 
+    if 'LK' in gametype:
+        for row in range(9):
+            for col in range(8):
+                if not ex_grid['LK'][row][col] or not grid[row][col] or not grid[row][col + 1]:
+                    continue
+
+                link_a, link_b = int(grid[row][col]), int(grid[row][col + 1])
+                if not (link_a + link_b == 10 or abs(link_a - link_b) == 1):
+                    invalid.update({(row, col), (row, col + 1)})
+
     # ex_row/col 규칙
     if 'SD' in gametype:
         for row in range(9):
@@ -788,23 +807,28 @@ def check_board_format(board, gametype):
     ex_row = [[] for _ in range(9)]
     ex_col = [[] for _ in range(9)]
 
-    ex_grid_type = ['LI', 'RO', 'CT']
+    ex_grid_type = ['LI', 'RO', 'CT', 'LK']
     for each_type in ex_grid_type:
         if each_type in gametype:
             ex_grid[each_type] = [[None] * 9 for _ in range(9)]
 
+    symbol_type = {'CT':'^', 'LK':'-'}
+    altern_symbol = {'CT':'ㅅ', 'LK':'ㅡ'}
+    enabled_symbol = set(gametype).intersection(symbol_type.keys())
     for i, row in enumerate(board.split()):
-        if 'CT' in gametype:
+        if enabled_symbol:
             temp_row = ''
             for item in row:
-                if item == '^' and i < 9 and len(temp_row) - 1 < 9:
-                    ex_grid['CT'][i][len(temp_row) - 1] = 'ㅅ'
+                for each_type in enabled_symbol:
+                    if item == symbol_type[each_type] and i < 9 and len(temp_row) - 1 < 9:
+                        ex_grid[each_type][i][len(temp_row) - 1] = altern_symbol[each_type]
+                        break
                 else:
                     temp_row += item
             row = temp_row
         
         for j, item in enumerate(row):
-            if item in ['o', 'x', '-', '•']:
+            if item in ['o', 'x', '•']:
                 continue
 
             if i < 9 and j < 9:
@@ -850,9 +874,11 @@ def check_board_format(board, gametype):
 
 def check_hover_on_items(event_pos, selection):
     item_height = selection.list_item_height
+    scroll_offset = selection.scroll_bar.scroll_position if selection.scroll_bar else 0
+    
     for index, item in enumerate(selection.item_list):
-        item_rect = pygame.Rect(selection.rect.left, selection.rect.top + index * item_height, selection.rect.width, item_height)
-        if item_rect.collidepoint(event_pos):
+        item_rect = pygame.Rect(selection.rect.left, selection.rect.top + index * item_height - scroll_offset, selection.rect.width, item_height)
+        if item_rect.colliderect(selection.rect) and item_rect.collidepoint(event_pos):
             return item
     return None
 
@@ -1112,7 +1138,10 @@ if __name__ == '__main__':
 
         root = tk.Tk()
         root.withdraw()
-        
-        messagebox.showerror("예기치 못한 오류가 발생했습니다.", f"Github의 Issue를 통해 해당 오류를 제보해주세요.\n발생 에러:\n{e}")
+        answer = messagebox.showerror("예기치 못한 오류가 발생했습니다.", f"Github의 Issue를 통해 해당 오류를 제보해주세요.\n확인 시 클립보드에 오류메시지가 저장됩니다.\n\n발생 에러:\n{traceback.format_exc()}", type=tk.messagebox.OKCANCEL)
+        if answer == 'ok':
+            root.clipboard_clear()
+            root.clipboard_append(traceback.format_exc())
+            root.update()
 
         sys.exit()
