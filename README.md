@@ -7,7 +7,7 @@ Sudoku Variants 특수 모드들에 대한 세부 규칙을 자동으로 판정�
 
 ## 변형 규칙
 [최신 버전](https://github.com/I-Cubic-I/Custom-Sudoku/releases/latest)에서 오답 판별을 지원하는 변형 규칙들은 다음과 같습니다.
-- 지원: DT, TP, CR, RO, SD, FX, QT, LI, RM, QD, CT
+- 지원: DT, TP, CR, RO, SD, FX, QT, LI, RM, QD, CT, LK
 - 미지원: AS
 
 ## 사용 방법
