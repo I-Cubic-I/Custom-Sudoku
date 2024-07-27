@@ -7,6 +7,7 @@ import webbrowser
 import tkinter as tk
 from tkinter import messagebox
 import traceback
+import json
 
 def resource_path(relative_path):
     try:
@@ -18,6 +19,19 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+theme_path = resource_path('Themes/theme.json')
+normal_font_path = resource_path('Fonts/NanumGothic.ttf')
+bold_font_path = resource_path('Fonts/NanumGothicExtraBold.ttf')
+
+with open(theme_path, 'r', encoding='utf-8') as f:
+    theme_data = json.load(f)
+
+theme_data['font_paths']['default'] = [normal_font_path]
+theme_data['text_box']['font']['regular_path'] = normal_font_path
+theme_data['label']['font']['regular_path'] = normal_font_path
+
+with open(theme_path, 'w', encoding='utf-8') as f:
+    json.dump(theme_data, f, ensure_ascii=False, indent=4)
 
 # 화면 크기 설정
 DEFAULT_SIZE = width, height = 800, 600
@@ -116,8 +130,8 @@ def draw_grid(screen, grid_rect, grid, ex_grid, ex_row, ex_col, highlight):
     grid_width = (m + ex_m / 2) * cell_size
     grid_height = (n + ex_n / 2) * cell_size
 
-    font = pygame.font.Font(resource_path('Fonts/NanumGothic.ttf'), int(cell_size * 0.6))
-    bold_font = pygame.font.Font(resource_path('Fonts/NanumGothicExtraBold.ttf'), int(cell_size * 0.6))
+    font = pygame.font.Font(normal_font_path, int(cell_size * 0.6))
+    bold_font = pygame.font.Font(bold_font_path, int(cell_size * 0.6))
     extra_font = pygame.font.SysFont('Arial', int(cell_size * 0.4), bold=False)
 
     # 그리드를 가운데에 정렬하기 위한 시작 위치 계산
@@ -137,7 +151,7 @@ def draw_grid(screen, grid_rect, grid, ex_grid, ex_row, ex_col, highlight):
             # 특수 규칙
             for each_type, each_ex_grid in ex_grid.items():
                 if each_ex_grid[row][col]:
-                    ex_font = pygame.font.Font(resource_path('Fonts/NanumGothicExtraBold.ttf'), int(cell_size * ex_size[each_type]))
+                    ex_font = pygame.font.Font(bold_font_path, int(cell_size * ex_size[each_type]))
                     ex_text = ex_font.render(each_ex_grid[row][col], True, ex_color[each_type])
                     ex_pos = tuple(a + b * cell_size for a, b in zip(grid_rect[row][col].center, ex_offset[each_type]))
                     ex_text_rect = ex_text.get_rect(center=ex_pos)
@@ -916,7 +930,7 @@ def main():
     pygame.display.set_icon(icon)
 
     # GUI 매니저 설정
-    manager = pygame_gui.UIManager((width, height), resource_path('Themes/theme.json'))
+    manager = pygame_gui.UIManager((width, height), theme_path)
 
 
     page = 'Main'
